@@ -1,0 +1,49 @@
+service: test-sls-lambda-layer-ts
+frameworkVersion: "3"
+plugins:
+  # 上手くいかないので、esbuildに切り替え
+  # - serverless-plugin-typescript
+  - serverless-esbuild
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    plugins: plugin.js
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "s3:ListBucket"
+          Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
+        - Effect: "Allow"
+          Action:
+            - "s3:PutObject"
+          Resource:
+            Fn::Join:
+              - ""
+              - - "arn:aws:s3:::"
+                - "Ref" : "ServerlessDeploymentBucket"
+                - "/*"
+package:
+  individually: true
+layers:
+  test-layer:
+    path: .layers/test-layer
+    name: test-layer-${sls:stage}
+    compatibleRuntimes:
+      - nodejs18.x
+    compatibleArchitectures:
+      - x86_64
+
+functions:
+  hello:
+    handler: src/handler.hello
+    layers:
+      - !Ref TestDashlayerLambdaLayer
+      
